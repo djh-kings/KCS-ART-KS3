@@ -14,8 +14,8 @@ All three are public domain.
 
 The exhibit does **not** load these files at runtime. To stay self-contained
 and host-independent (the DC preview doesn't resolve relative asset paths), each
-artwork is **embedded directly in `Hidden Patterns.dc.html` as a base64 data
-URI** on its `DATA[i].img` field, rendered via `<img src="…">`.
+artwork is **embedded directly in `index.html` as a base64 data URI** on its
+`DATA[i].img` field, rendered via `<img src="…">`.
 
 The embedded copies are downscaled to ~1000px wide / JPEG q72 (~150–200 KB each)
 — plenty for a low-opacity backdrop and small card thumbnails.
