@@ -311,10 +311,27 @@ class Component extends DCLogic {
         if (hit >= 0) this.rocks.splice(hit, 1);
         else if (this.rocks.length < 5) this.rocks.push({ x: mx, y: my, r: 34 });
       } else {
-        if (this.sources.length < 7) this.sources.push({ x: mx, y: my, t0: this.t });
+        if (this.sources.length >= 6) this.sources.shift();
+        this.sources.push({ x: mx, y: my, t0: this.t });
       }
       if (!this.state.interacted) this.setState({ interacted: true });
     };
+
+    // touch support for kiosks / tablets: drag drives the flow field, taps act like clicks
+    const touchPos = (e) => { const r = c.getBoundingClientRect(); const t = e.touches[0] || e.changedTouches[0]; return { mx: t.clientX - r.left, my: t.clientY - r.top, clientX: t.clientX, clientY: t.clientY }; };
+    c.ontouchstart = (e) => {
+      const m = this.DATA[this.state.activeIdx].mode;
+      const p = touchPos(e);
+      if (m === 'flow') { this.mouse.x = p.mx; this.mouse.y = p.my; this.mouse.active = true; }
+      else { c.onclick({ clientX: p.clientX, clientY: p.clientY }); }
+      if (!this.state.interacted) this.setState({ interacted: true });
+      e.preventDefault();
+    };
+    c.ontouchmove = (e) => { const p = touchPos(e); this.mouse.x = p.mx; this.mouse.y = p.my; this.mouse.active = true; e.preventDefault(); };
+    c.ontouchend = () => { this.mouse.active = false; };
+
+    // cursor affordance: signal where clicking does something
+    c.style.cursor = (mode === 'wave' || mode === 'ripple') ? 'crosshair' : 'default';
 
     const loop = () => { this.step(mode); this.raf = requestAnimationFrame(loop); };
     this.raf = requestAnimationFrame(loop);
@@ -354,20 +371,34 @@ class Component extends DCLogic {
       const decayCoef = 0.0018 * P.decay;
       const [r0, g0, b0] = this.rgb(color);
       ctx.clearRect(0, 0, c.width, c.height);
+      // pre-compute per-source age + amplitude ramp (so a new ripple grows in, not pops)
+      const src = this.sources.map(s => {
+        const age = this.t - s.t0;
+        return { x: s.x, y: s.y, age, amp: Math.min(1, age / 320) };
+      });
       for (let y = 0; y < c.height; y += cell) {
         const cy = y + cell / 2;
         for (let x = 0; x < c.width; x += cell) {
           const cx = x + cell / 2;
           let sum = 0;
-          for (const s of this.sources) {
+          for (const s of src) {
             const dx = cx - s.x, dy = cy - s.y, d = Math.hypot(dx, dy);
-            sum += Math.sin(k * d - omega * (this.t - s.t0)) * Math.exp(-d * decayCoef);
+            sum += Math.sin(k * d - omega * s.age) * Math.exp(-d * decayCoef) * s.amp;
           }
           const inten = Math.min(1, Math.abs(sum) * 0.7);
           if (inten < 0.05) continue;
           ctx.fillStyle = `rgba(${r0},${g0},${b0},${inten})`;
           ctx.fillRect(x, y, cell, cell);
         }
+      }
+      // expanding wavefront ring at each fresh source — the "you sent a ripple" cue
+      ctx.lineWidth = 2;
+      for (const s of src) {
+        if (s.age > 520) continue;
+        const radius = s.age * 0.95 * P.speed;
+        const a = (1 - s.age / 520) * 0.5;
+        ctx.strokeStyle = `rgba(${r0},${g0},${b0},${a})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, radius, 0, Math.PI * 2); ctx.stroke();
       }
       return;
     }
@@ -441,7 +472,7 @@ class Component extends DCLogic {
     const visited = this.state.visited.slice();
     visited[this.state.activeIdx] = true;
     this.setState({ revealed: true, visited, artOpacity: 0.7 });
-    setTimeout(() => this.setState({ sentenceVisible: true }), 3000);
+    setTimeout(() => this.setState({ sentenceVisible: true }), 1400);
   }
 
   setParam(mode, key, val) {
