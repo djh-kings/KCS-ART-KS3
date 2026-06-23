@@ -1,20 +1,38 @@
 # Artwork images
 
-The exhibit (`Hidden Patterns.dc.html`) loads each artwork from this folder via
-CSS `background-image`. Until a file is present, the card and canvas fall back
-gracefully to the striped `[ artwork: … ]` placeholder — nothing breaks.
+These three JPEGs are the **full-resolution sources** for the exhibit:
 
-Drop in these four files (public domain), keeping the exact names:
+| File              | Artwork                          |
+|-------------------|----------------------------------|
+| `starry-night.jpg`| The Starry Night — Van Gogh 1889 |
+| `great-wave.jpg`  | The Great Wave — Hokusai 1831    |
+| `the-scream.jpg`  | The Scream — Munch 1893          |
 
-| File              | Artwork                         | Source (public domain)                          |
-|-------------------|---------------------------------|-------------------------------------------------|
-| `starry-night.jpg`| The Starry Night — Van Gogh 1889| Wikimedia: *Van Gogh - Starry Night*            |
-| `great-wave.jpg`  | The Great Wave — Hokusai 1831   | Wikimedia: *The Great Wave off Kanagawa*        |
-| `the-scream.jpg`  | The Scream — Munch 1893         | Wikimedia: *The Scream*                         |
+All three are public domain.
 
-Recommended: landscape-ish crops, ~1400px wide, optimised JPEG.
+## How they're displayed
 
-> Note: these could not be fetched automatically — this environment's egress
-> policy blocks `commons.wikimedia.org` / `upload.wikimedia.org` and the museum
-> image APIs (403). Add the files locally, or upload them in chat and they'll be
-> committed here.
+The exhibit does **not** load these files at runtime. To stay self-contained
+and host-independent (the DC preview doesn't resolve relative asset paths), each
+artwork is **embedded directly in `Hidden Patterns.dc.html` as a base64 data
+URI** on its `DATA[i].img` field, rendered via `<img src="…">`.
+
+The embedded copies are downscaled to ~1000px wide / JPEG q72 (~150–200 KB each)
+— plenty for a low-opacity backdrop and small card thumbnails.
+
+### Re-embedding after changing a source
+
+If you swap an image here, regenerate its data URI and replace the matching
+`img: 'data:image/jpeg;base64,…'` string in the HTML, e.g.:
+
+```python
+from PIL import Image; import base64, io
+im = Image.open("assets/images/the-scream.jpg").convert("RGB")
+im.thumbnail((1000, 4000))
+buf = io.BytesIO(); im.save(buf, "JPEG", quality=72, optimize=True, progressive=True)
+print("data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode())
+```
+
+> Note: `<img src>` is used rather than CSS `background-image` on purpose — the
+> runtime parses style strings by splitting on `;`, which would truncate a data
+> URI (`data:image/jpeg;base64,…`).
