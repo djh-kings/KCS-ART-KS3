@@ -377,37 +377,48 @@ class Component extends DCLogic {
     const color = this.state.particleColor;
     if (mode === 'ripple') {
       const P = this.state.params.ripple;
-      const cell = 8;
       const [r0, g0, b0] = this.rgb(color);
-      const t = this.t, sp = P.speed, sw = P.swirl;
-      const ky = (Math.PI * 2) / P.spacing;   // vertical band frequency
-      // taps fade out, so retire spent ones
+      const t = this.t, sp = P.speed, sw = P.swirl, spacing = P.spacing;
       this.sources = this.sources.filter(s => t - s.t0 < 3600);
       const src = this.sources.map(s => ({ x: s.x, y: s.y, age: t - s.t0 }));
-      ctx.clearRect(0, 0, c.width, c.height);
-      for (let y = 0; y < c.height; y += cell) {
-        const wy = ky * y;
-        for (let x = 0; x < c.width; x += cell) {
-          // Munch's sky: horizontal bands whose phase is warped by a sum of sine
-          // waves drifting sideways — superposition, made flowing instead of circular
-          let H = wy
-            + sw * (1.1 * Math.sin(0.012 * x + 0.0009 * sp * t)
-                  + 0.7 * Math.sin(0.021 * x - 0.0013 * sp * t + 0.004 * y)
-                  + 0.5 * Math.sin(0.008 * (x + y) + 0.0006 * sp * t));
-          // a tap sends a ripple that bends the bands and dies away
-          for (const s of src) {
-            const dx = x - s.x, dy = y - s.y, d = Math.hypot(dx, dy);
-            const amp = 2.6 * Math.exp(-s.age * 0.0016) * Math.exp(-d * 0.0024);
-            if (amp < 0.02) continue;
-            H += amp * Math.sin(0.06 * d - 0.02 * sp * s.age);
-          }
-          const v = Math.sin(H);
-          if (v <= 0.06) continue;            // bright flowing lines along the crests
-          const inten = Math.pow(v, 1.6) * 0.95;
-          ctx.fillStyle = `rgba(${r0},${g0},${b0},${inten})`;
-          ctx.fillRect(x, y, cell, cell);
+
+      // vertical displacement of a flowing line, built from summed sine waves
+      // (superposition). The y- and diagonal terms keep the lines from staying
+      // parallel, so they bunch and swirl like Munch's sky.
+      const warp = (x, y) => sw * (
+          10 * Math.sin(0.006 * x + 0.0006 * sp * t)
+        +  6 * Math.sin(0.013 * x - 0.0009 * sp * t + 0.004 * y)
+        +  4 * Math.sin(0.011 * y + 0.0011 * sp * t)
+        +  5 * Math.sin(0.005 * (x - y) + 0.0007 * sp * t));
+      const ripple = (x, y) => {
+        let r = 0;
+        for (const s of src) {
+          const dx = x - s.x, dy = y - s.y, d = Math.hypot(dx, dy);
+          const amp = 26 * Math.exp(-s.age * 0.0016) * Math.exp(-d * 0.0024);
+          if (amp < 0.3) continue;
+          r += amp * Math.sin(0.045 * d - 0.02 * sp * s.age);
         }
+        return r;
+      };
+
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = `rgba(${r0},${g0},${b0},0.82)`;
+      ctx.shadowBlur = 6; ctx.shadowColor = `rgba(${r0},${g0},${b0},0.5)`;
+      const stepX = 10;
+      const nLines = Math.ceil(c.height / spacing) + 2;
+      for (let i = -1; i < nLines; i++) {
+        const baseY = i * spacing;
+        ctx.beginPath();
+        for (let x = 0; x <= c.width; x += stepX) {
+          // displacement depends on y, so estimate then refine once
+          let y = baseY + warp(x, baseY) + ripple(x, baseY);
+          y = baseY + warp(x, y) + ripple(x, y);
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
       }
+      ctx.shadowBlur = 0;
       return;
     }
 
