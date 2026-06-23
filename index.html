@@ -29,6 +29,8 @@
   #hp-root input[type=range]{ -webkit-appearance:none; appearance:none; height:3px; border-radius:2px; background:#333; accent-color:#00E5FF; cursor:pointer; }
   #hp-root input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:#00E5FF; cursor:pointer; }
   @keyframes hp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes hp-backdrop { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes hp-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </helmet>
 
@@ -144,6 +146,21 @@
             </div>
           </sc-if>
         </div>
+
+        <!-- reveal moment overlay (covers the canvas area only, not the bars) -->
+        <sc-if value="{{ overlayOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeOverlay }}" style="position:absolute; inset:0; z-index:8; background:rgba(6,6,12,0.78); display:flex; align-items:center; justify-content:center; padding:32px; animation:hp-backdrop 0.5s ease both;">
+            <div onClick="{{ stopProp }}" style="max-width:600px; width:100%; background:#141414; border:0.5px solid #2E2E2E; border-radius:14px; padding:44px 48px 40px; animation:hp-rise 0.6s cubic-bezier(.2,.7,.2,1) 0.15s both;">
+              <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#00E5FF; margin-bottom:22px;">The hidden pattern</div>
+              <div style="font-weight:400; font-size:24px; line-height:1.45; color:#FFB300;">{{ current.sentence }}</div>
+              <div style="border-top:0.5px solid #2A2A2A; margin:32px 0 24px;"></div>
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div onClick="{{ learnFromOverlay }}" style="font-weight:600; font-size:14px; color:#00E5FF; border:1.5px solid #00E5FF; background:transparent; border-radius:22px; padding:9px 24px; cursor:pointer;">What's the algorithm? →</div>
+                <div onClick="{{ closeOverlay }}" style="font-weight:400; font-size:14px; color:#888888; cursor:pointer; padding:9px 8px;">Back to the artwork</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
       </div>
 
       <!-- bottom bar -->
@@ -153,8 +170,8 @@
                style="{{ revealBtnStyle }}">Reveal it →</div>
         </sc-if>
         <sc-if value="{{ postReveal }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; justify-content:center;">
-            <div style="{{ revealTextStyle }}">{{ current.sentence }}</div>
+          <div style="display:flex; align-items:center; gap:22px;">
+            <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
             <div onClick="{{ toggleInfo }}" onMouseEnter="{{ infoHoverOn }}" onMouseLeave="{{ infoHoverOff }}" style="{{ infoLinkStyle }}">Learn more →</div>
           </div>
         </sc-if>
@@ -197,7 +214,7 @@ class Component extends DCLogic {
     togHover: false,
     infoOpen: false,
     infoHover: false,
-    sentenceVisible: false,
+    overlayOpen: false,
     panelOpen: true,
     artOpacity: 0.3,
     particleColor: '#00E5FF',
@@ -461,7 +478,7 @@ class Component extends DCLogic {
   componentWillUnmount() { this.stopSim(); }
 
   openCard(i) {
-    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, sentenceVisible: false, artOpacity: 0.3, infoOpen: false }, () => {
+    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, artOpacity: 0.3, infoOpen: false }, () => {
       setTimeout(() => this.startSim(), 0);
     });
   }
@@ -471,8 +488,7 @@ class Component extends DCLogic {
     if (this.state.revealed) return;
     const visited = this.state.visited.slice();
     visited[this.state.activeIdx] = true;
-    this.setState({ revealed: true, visited, artOpacity: 0.7 });
-    setTimeout(() => this.setState({ sentenceVisible: true }), 1400);
+    this.setState({ revealed: true, visited, artOpacity: 0.7, overlayOpen: true });
   }
 
   setParam(mode, key, val) {
@@ -570,8 +586,14 @@ class Component extends DCLogic {
       toggleInfo: () => this.setState({ infoOpen: !s.infoOpen }),
       infoHoverOn: () => this.setState({ infoHover: true }),
       infoHoverOff: () => this.setState({ infoHover: false }),
-      infoLinkStyle: `font-weight:400; font-size:13px; cursor:pointer; white-space:nowrap; color:${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; border-bottom:0.5px solid ${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; padding-bottom:1px; transition:color 0.15s, border-color 0.15s; opacity:${s.sentenceVisible ? 1 : 0};`,
+      infoLinkStyle: `font-weight:400; font-size:13px; cursor:pointer; white-space:nowrap; color:${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; border-bottom:0.5px solid ${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; padding-bottom:1px; transition:color 0.15s, border-color 0.15s;`,
       infoDrawerStyle: `position:absolute; top:44px; bottom:0; right:0; width:340px; background:#0E0E0E; border-left:0.5px solid #2A2A2A; padding:24px 26px; overflow-y:auto; transform:translateX(${s.infoOpen ? '0' : '100%'}); transition:transform 0.35s ease; z-index:5;`,
+
+      overlayOpen: onCard && s.overlayOpen,
+      closeOverlay: () => this.setState({ overlayOpen: false }),
+      openOverlay: () => this.setState({ overlayOpen: true }),
+      learnFromOverlay: () => this.setState({ overlayOpen: false, infoOpen: true }),
+      stopProp: (e) => e.stopPropagation(),
 
       goHome: () => this.goHome(),
       reveal: () => this.doReveal(),
@@ -587,8 +609,6 @@ class Component extends DCLogic {
       revealHoverOn: () => this.setState({ revealHover: true }),
       revealHoverOff: () => this.setState({ revealHover: false }),
       revealBtnStyle: `font-weight:600; font-size:15px; color:var(--accent); border:1.5px solid var(--accent); background:${s.revealHover ? '#001A22' : 'transparent'}; border-radius:24px; padding:10px 32px; cursor:pointer; animation:hp-pulse 2.5s ease-in-out infinite;`,
-
-      revealTextStyle: `font-weight:400; font-size:14px; color:#FFB300; text-align:center; max-width:560px; line-height:1.5; transition:opacity 1s; opacity:${s.sentenceVisible ? 1 : 0};`,
     };
   }
 }
