@@ -47,7 +47,8 @@
       <div style="width:520px; flex:none; padding:54px 56px; display:flex; flex-direction:column; justify-content:center; border-right:0.5px solid var(--hair); background:var(--bar);">
         <div style="font-weight:600; font-size:32px; color:var(--text); line-height:1.05; letter-spacing:-0.01em;">Hidden Patterns</div>
         <div style="font-size:15px; color:var(--accent); margin-top:8px;">Find the algorithm hiding in the artwork.</div>
-        <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:26px;">Three famous paintings, each secretly driven by an algorithm. Watch the motion, guess the rule that creates it — then reveal the answer and tweak it yourself.</div>
+        <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:26px;">Hidden inside these three paintings is a pattern. Not a visual trick — an actual algorithm, the kind used in physics simulations and computer graphics.</div>
+        <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:14px;">Watch how the particles move. Adjust the sliders. See if you can work out what each parameter is doing before you read the explanation.</div>
         <div style="display:flex; flex-direction:column; gap:16px; margin-top:32px;">
           <sc-for list="{{ steps }}" as="st" hint-placeholder-count="3">
             <div style="display:flex; align-items:center; gap:13px;">
@@ -165,7 +166,36 @@
             <div style="height:0; border-top:0.5px solid var(--hair); margin-top:14px;"></div>
           </div>
           <div class="hp-read-body" style="flex:1; min-height:0; overflow-y:auto; padding:24px 30px 32px;">
-            <div style="font-family:'Newsreader',serif; font-size:16.5px; line-height:1.72; color:var(--text); white-space:pre-line;">{{ readingBody }}</div>
+            <!-- reading tabs (artist / painting / algorithm) -->
+            <sc-if value="{{ showReadingText }}" hint-placeholder-val="{{ true }}">
+              <div style="font-family:'Newsreader',serif; font-size:16.5px; line-height:1.72; color:var(--text); white-space:pre-line;">{{ readingBody }}</div>
+            </sc-if>
+
+            <!-- activities tab -->
+            <sc-if value="{{ showActivities }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:13.5px; line-height:1.6; color:var(--text-dim); background:var(--bg); border:0.5px solid var(--hair); border-radius:8px; padding:14px 16px; white-space:pre-line;">{{ actIntro }}</div>
+              <div style="font-size:12px; line-height:1.55; color:var(--muted); border-left:2px solid var(--accent); padding:5px 0 5px 12px; margin-top:14px; margin-bottom:24px;">{{ actBefore }}</div>
+
+              <sc-for list="{{ activities }}" as="a" hint-placeholder-count="4">
+                <div style="margin-bottom:24px;">
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">
+                    <span style="width:24px; height:24px; flex:none; border-radius:50%; background:var(--accent); color:var(--canvas); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">{{ a.n }}</span>
+                    <span style="font-size:14px; font-weight:600; color:var(--text);">{{ a.title }}</span>
+                  </div>
+                  <div style="font-family:'Newsreader',serif; font-size:15px; line-height:1.62; color:var(--text-dim); white-space:pre-line; padding-left:34px;">{{ a.body }}</div>
+                </div>
+              </sc-for>
+
+              <div style="border-top:0.5px solid var(--hair); margin-top:6px; padding-top:18px;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin-bottom:12px;">Final questions</div>
+                <sc-if value="{{ finalUnlocked }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-family:'Newsreader',serif; font-size:15px; line-height:1.62; color:var(--text-dim); white-space:pre-line;">{{ actFinal }}</div>
+                </sc-if>
+                <sc-if value="{{ finalLocked }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:13px; line-height:1.55; color:var(--muted);">Come back here once you've explored all three works.</div>
+                </sc-if>
+              </div>
+            </sc-if>
           </div>
         </div>
 
@@ -238,7 +268,12 @@ In 2006, a team of physicists analysed the brushwork in The Starry Night using t
 Paintings from his more stable periods do not show this pattern. Only the work produced during the most intense episodes does.
 
 Van Gogh had no knowledge of fluid dynamics. He painted what he saw and felt, and encoded a mathematical structure that the physics of his era could not yet describe. The flow field on screen is the algorithm that gets closest to recreating it. Adjust the turbulence slider and watch how the behaviour changes.`,
-      activities: "[Placeholder — Activities: The Starry Night]\n\nReplace this string with the activities text for The Starry Night. Separate paragraphs with a blank line (\n\n).",
+      activities: [
+        { n: '1', title: 'Work out the sliders', body: `Without reading the other tabs, drag each slider and note — in plain English — what you think it does:\n\n•  Particles\n•  Turbulence\n•  Cursor pull\n•  Speed\n\nNow read the panel. Were you right?` },
+        { n: '2', title: 'Find the calm', body: `Move your cursor slowly around the canvas until the particles barely move. Mark the spot on the printed outline.\n\nDoes your partner find the same spot? Why?` },
+        { n: '3', title: 'Best match', body: `Adjust the sliders until the simulation looks as close to the real painting as possible. Note your settings — Particles, Turbulence, Speed and Colour — in your book.\n\nCompare with your partner. Who got closer?` },
+        { n: '4', title: 'Break it', body: `Now make it look as unlike the painting as you can. What settings did you use?` },
+      ],
     },
     {
       title: 'The Great Wave', meta: 'Hokusai · 1831',
@@ -277,7 +312,12 @@ The wave physics in Hokusai's print involves two distinct phenomena. The first i
 The simulation captures the first of these directly. The flow field tiles produce interference-like patterns when neighbouring cells point in converging directions, generating peaks where flow concentrates. The speed slider controls how fast particles move through the field; at higher speeds the curl at the wave crest becomes visible as particles bunch and accelerate. The turbulence slider introduces disorder into the cell directions, breaking the clean wave structure into choppier, more chaotic water.
 
 Hokusai worked from observation and instinct. The physics he depicted — rogue wave formation, Stokes drift, the ballistic arc of breaking spray — was not formally described until decades after his death. The algorithm replicates the visual result. The underlying mathematics turns out to be the same.`,
-      activities: "[Placeholder — Activities: The Great Wave]\n\nReplace this string with the activities text for The Great Wave. Separate paragraphs with a blank line (\n\n).",
+      activities: [
+        { n: '5', title: 'Two algorithms, one feeling', body: `Starry Night uses a Perlin-noise flow field. The Great Wave uses a tiled directional flow field — a different algorithm. Find one thing that looks the same between the two simulations, and one thing that looks different.\n\nSame? Different?` },
+        { n: '6', title: 'Direction', body: `Watch the particles for 20 seconds without touching anything. Which direction are most of them moving — left to right, right to left, or no clear direction?\n\nDrag Turbulence to maximum. Does that change your answer?` },
+        { n: '7', title: 'Colour', body: `Hokusai used two main colours in the original print. Pick the closest from the palette.\n\nBetter or worse than the default? Why?` },
+        { n: '8', title: 'Wave speed', body: `A real wave breaks in about two seconds. Set Speed so the particles feel like an actual wave.` },
+      ],
     },
     {
       title: 'The Scream', meta: 'Munch · 1893',
@@ -314,7 +354,11 @@ In optics this produces visible fringes — alternating bands of bright and dark
 Munch's sky is structured as an interference pattern. The alternating bands of red and dark blue, the undulating rhythm across the canvas, the sense of the landscape vibrating — these are not purely expressive choices. They map directly onto the visual signature of wave superposition. He painted a sound wave oscillating through the air, which is precisely what he described: not a man screaming, but a man overwhelmed by a scream in the environment itself.
 
 The simulation renders this literally. Multiple wave sources generate overlapping fields; the particle movement reflects the combined displacement at each point. The turbulence slider introduces phase variation between the wave sources, shifting the interference pattern from regular and rhythmic to broken and chaotic. Turn it to maximum and the orderly bands collapse. That, in physical terms, is what noise is.`,
-      activities: "[Placeholder — Activities: The Scream]\n\nReplace this string with the activities text for The Scream. Separate paragraphs with a blank line (\n\n).",
+      activities: [
+        { n: '9', title: 'First impression', body: `Before touching anything, write one word for how this feels different from the other two.` },
+        { n: '10', title: 'Cursor pull', body: `Set Cursor pull to maximum. Move your cursor slowly across the canvas.\n\nWhat does it feel like the cursor is doing to the particles?\n\nWhy do you think this suits The Scream more than it suits Van Gogh's painting?` },
+        { n: '11', title: 'Best match', body: `Get as close to the painting as you can. Note your settings — Particles, Turbulence, Cursor pull and Speed — in your book.` },
+      ],
     },
   ];
 
@@ -661,6 +705,14 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       steps,
       readingTabs,
       readingBody: cur[s.readingTab],
+      showReadingText: s.readingTab !== 'activities',
+      showActivities: s.readingTab === 'activities',
+      activities: cur.activities,
+      actIntro: `The sliders change how the algorithm behaves. Your job is to work out what each one is actually doing, then see if you can make the simulation match the painting underneath it.\n\nTry the sliders before you read the other tabs.`,
+      actBefore: `Before you start: look at the three paintings on the home screen and write down one word for what they have in common. Come back to it at the end.`,
+      finalUnlocked: s.visited.every(Boolean),
+      finalLocked: !s.visited.every(Boolean),
+      actFinal: `Go back to your word from the start. What do the three paintings actually have in common?\n\nThe algorithm doesn't know it's making art. Van Gogh didn't know he was running an algorithm. So who made this?`,
 
       reset: () => this.doReset(),
       resetHoverOn: () => this.setState({ resetHover: true }),
