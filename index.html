@@ -138,6 +138,9 @@
               <span style="font-weight:400; font-size:15px; color:#00E5FF; background:rgba(6,6,12,0.55); padding:8px 16px; border-radius:20px;">{{ current.instruction }}</span>
             </div>
           </sc-if>
+
+          <!-- reset: re-seed particles / clear rocks & taps -->
+          <div onClick="{{ reset }}" onMouseEnter="{{ resetHoverOn }}" onMouseLeave="{{ resetHoverOff }}" style="{{ resetStyle }}">↺ Reset</div>
         </div>
 
         <!-- reveal moment overlay (covers the stage area) -->
@@ -207,12 +210,13 @@ class Component extends DCLogic {
     togHover: false,
     infoOpen: false,
     infoHover: false,
+    resetHover: false,
     overlayOpen: false,
     artOpacity: 0.3,
     particleColor: '#00E5FF',
     params: {
       flow:   { count: 600, scale: 1.0, pull: 1.0, speed: 1.0 },
-      wave:   { speed: 1.0, swell: 1.0, rock: 1.0 },
+      wave:   { speed: 1.0, swell: 1.0, rock: 1.0, size: 34 },
       ripple: { spacing: 46, speed: 1.0, swirl: 1.0 },
     },
   };
@@ -314,9 +318,10 @@ class Component extends DCLogic {
       const r = c.getBoundingClientRect();
       const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (m === 'wave') {
-        const hit = this.rocks.findIndex(rk => Math.hypot(rk.x - mx, rk.y - my) < rk.r);
+        const rad = this.state.params.wave.size;
+        const hit = this.rocks.findIndex(rk => Math.hypot(rk.x - mx, rk.y - my) < rad);
         if (hit >= 0) this.rocks.splice(hit, 1);
-        else if (this.rocks.length < 5) this.rocks.push({ x: mx, y: my, r: 34 });
+        else if (this.rocks.length < 5) this.rocks.push({ x: mx, y: my });
       } else {
         if (this.sources.length >= 6) this.sources.shift();
         this.sources.push({ x: mx, y: my, t0: this.t });
@@ -439,9 +444,10 @@ class Component extends DCLogic {
       if (mode === 'wave') {
         a = this.field(p.x, p.y, this.t) * 0.25 * P.wave.swell;
         let vx = Math.cos(a) + 1.1, vy = Math.sin(a) * 0.8;
+        const rkR = P.wave.size;
         for (const rk of this.rocks) {
           const dx = p.x - rk.x, dy = p.y - rk.y, d = Math.hypot(dx, dy);
-          if (d < rk.r * 2.2) { const f = (rk.r * 2.2 - d) / (rk.r * 2.2); vx += (dx / (d || 1)) * f * 3 * P.wave.rock; vy += (dy / (d || 1)) * f * 3 * P.wave.rock; }
+          if (d < rkR * 2.2) { const f = (rkR * 2.2 - d) / (rkR * 2.2); vx += (dx / (d || 1)) * f * 3 * P.wave.rock; vy += (dy / (d || 1)) * f * 3 * P.wave.rock; }
         }
         p.x += vx * 0.9 * P.wave.speed; p.y += vy * 0.9 * P.wave.speed;
       } else {
@@ -472,9 +478,10 @@ class Component extends DCLogic {
       ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
     }
     ctx.shadowBlur = 0;
+    const rkDraw = this.state.params.wave.size;
     for (const rk of this.rocks) {
       ctx.strokeStyle = this.hexA(color, 0.4);
-      ctx.beginPath(); ctx.arc(rk.x, rk.y, rk.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(rk.x, rk.y, rkDraw, 0, Math.PI * 2); ctx.stroke();
     }
   }
 
@@ -486,6 +493,11 @@ class Component extends DCLogic {
     });
   }
   goHome() { this.stopSim(); this.setState({ screen: 'home' }); }
+
+  doReset() {
+    // re-seed particles and clear placed rocks / taps; back to the starting state
+    this.setState({ interacted: false }, () => { if (this.canvasEl) this.startSim(); });
+  }
 
   doReveal() {
     if (this.state.revealed) return;
@@ -522,6 +534,7 @@ class Component extends DCLogic {
       { key: 'speed', label: 'Current speed', min: 0.3, max: 2.5, step: 0.1, fmt: v => v.toFixed(1) + '×' },
       { key: 'swell', label: 'Swell', min: 0.2, max: 3, step: 0.1, fmt: v => v.toFixed(1) + '×' },
       { key: 'rock',  label: 'Rock strength', min: 0.2, max: 3, step: 0.1, fmt: v => v.toFixed(1) + '×' },
+      { key: 'size',  label: 'Rock size', min: 15, max: 80, step: 1, fmt: v => v + 'px' },
     ],
     ripple: [
       { key: 'spacing', label: 'Band spacing', min: 20, max: 90, step: 2, fmt: v => v + 'px' },
@@ -588,6 +601,11 @@ class Component extends DCLogic {
       infoHoverOff: () => this.setState({ infoHover: false }),
       infoLinkStyle: `font-weight:400; font-size:13px; cursor:pointer; white-space:nowrap; color:${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; border-bottom:0.5px solid ${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; padding-bottom:1px; transition:color 0.15s, border-color 0.15s;`,
       infoDrawerStyle: `position:absolute; top:44px; bottom:0; right:0; width:340px; background:var(--surface); border-left:0.5px solid var(--border); padding:24px 26px; overflow-y:auto; transform:translateX(${s.infoOpen ? '0' : '100%'}); transition:transform 0.35s ease; z-index:5;`,
+
+      reset: () => this.doReset(),
+      resetHoverOn: () => this.setState({ resetHover: true }),
+      resetHoverOff: () => this.setState({ resetHover: false }),
+      resetStyle: `position:absolute; top:10px; right:10px; z-index:6; font-size:12px; color:var(--accent); border:1px solid var(--accent); background:${s.resetHover ? 'var(--accent-dim)' : 'rgba(6,6,12,0.45)'}; border-radius:6px; padding:5px 12px; cursor:pointer; white-space:nowrap; transition:background 0.15s;`,
 
       overlayOpen: onCard && s.overlayOpen,
       closeOverlay: () => this.setState({ overlayOpen: false }),
