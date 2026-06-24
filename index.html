@@ -48,7 +48,8 @@
         <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
           <div style="font-weight:600; font-size:32px; color:var(--text); line-height:1.05; letter-spacing:-0.01em;">Hidden Patterns</div>
           <div style="font-size:15px; color:var(--accent); margin-top:8px;">Find the algorithm hiding in the artwork.</div>
-          <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:26px;">Three famous paintings, each secretly driven by an algorithm. Watch the motion, guess the rule that creates it — then reveal the answer and tweak it yourself.</div>
+          <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:26px;">Hidden inside these three paintings is a pattern. Not a visual trick — an actual algorithm, the kind used in physics simulations and computer graphics.</div>
+          <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:14px;">Watch how the particles move. Adjust the sliders. See if you can work out what each parameter is doing before you read the explanation.</div>
           <div style="display:flex; flex-direction:column; gap:16px; margin-top:32px;">
             <sc-for list="{{ steps }}" as="st" hint-placeholder-count="3">
               <div style="display:flex; align-items:center; gap:13px;">
@@ -120,6 +121,7 @@
             </sc-for>
           </div>
         </div>
+        <div onClick="{{ resetCurrent }}" style="font-size:12px; color:var(--muted); border:0.5px solid var(--border); border-radius:16px; padding:7px 14px; cursor:pointer; white-space:nowrap; align-self:center;">↺ Reset</div>
       </div>
 
       <!-- body: stage column + reading drawer -->
@@ -555,21 +557,53 @@ The simulation renders this literally. Multiple wave sources generate overlappin
 
   componentWillUnmount() { this.stopSim(); }
 
-  DEFAULT_PARAMS = {
-    flow:   { count: 600, scale: 1.0, pull: 1.0, speed: 1.0 },
-    wave:   { speed: 1.0, swell: 1.0, rock: 1.0 },
-    ripple: { spacing: 46, speed: 1.0, swirl: 1.0 },
+  // Per-painting defaults: tuned so the algorithm output resembles the
+  // original painting as closely as possible. Edit these to refine the
+  // match for each work.
+  DEFAULTS_BY_INDEX = {
+    0: { // Starry Night — dense, high turbulence, moderate speed
+      params:  { flow: { count: 850, scale: 1.6, pull: 1.0, speed: 0.9 } },
+      artOpacity: 0.45,
+      color: '#00E5FF',
+    },
+    1: { // Great Wave — strong rolling swell, rocks divert the current
+      params:  { wave: { speed: 1.2, swell: 1.7, rock: 1.5 } },
+      artOpacity: 0.45,
+      color: '#00E5FF',
+    },
+    2: { // The Scream — slow undulating bands, strong swirl
+      params:  { ripple: { spacing: 42, speed: 0.7, swirl: 1.4 } },
+      artOpacity: 0.45,
+      color: '#FFB300',
+    },
   };
 
-  openCard(i) {
-    const params = {
-      flow:   { ...this.DEFAULT_PARAMS.flow },
-      wave:   { ...this.DEFAULT_PARAMS.wave },
-      ripple: { ...this.DEFAULT_PARAMS.ripple },
+  applyDefaults(i, extra) {
+    const d = this.DEFAULTS_BY_INDEX[i] || {};
+    const merged = {
+      flow:   { count: 600, scale: 1.0, pull: 1.0, speed: 1.0 },
+      wave:   { speed: 1.0, swell: 1.0, rock: 1.0 },
+      ripple: { spacing: 46, speed: 1.0, swirl: 1.0 },
     };
-    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, artOpacity: 0.3, infoOpen: false, tab: 0, params, particleColor: this.DATA[i].color || '#00E5FF' }, () => {
-      setTimeout(() => this.startSim(), 0);
+    for (const k of Object.keys(d.params || {})) merged[k] = { ...merged[k], ...d.params[k] };
+    this.setState({
+      params: merged,
+      artOpacity: d.artOpacity != null ? d.artOpacity : 0.3,
+      particleColor: d.color || this.DATA[i].color || '#00E5FF',
+      ...(extra || {}),
+    }, () => {
+      const mode = this.DATA[i].mode;
+      if (mode === 'flow') this.rebuildParticles(merged.flow.count);
     });
+  }
+
+  openCard(i) {
+    this.applyDefaults(i, { screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, infoOpen: false, tab: 0 });
+    setTimeout(() => this.startSim(), 0);
+  }
+
+  resetCurrent() {
+    this.applyDefaults(this.state.activeIdx);
   }
   goHome() { this.stopSim(); this.setState({ screen: 'home' }); }
 
@@ -697,6 +731,7 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       stopProp: (e) => e.stopPropagation(),
 
       goHome: () => this.goHome(),
+      resetCurrent: () => this.resetCurrent(),
       reveal: () => this.doReveal(),
       toggleTheme: () => this.setState({ theme: s.theme === 'dark' ? 'light' : 'dark' }),
       togLabel: s.theme === 'dark' ? 'Light' : 'Dark',
