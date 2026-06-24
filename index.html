@@ -10,7 +10,7 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; background: #0A0A0A; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -31,6 +31,9 @@
   @keyframes hp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   @keyframes hp-backdrop { from { opacity: 0; } to { opacity: 1; } }
   @keyframes hp-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  #hp-root .hp-scroll::-webkit-scrollbar { width:8px; }
+  #hp-root .hp-scroll::-webkit-scrollbar-thumb { background:rgba(120,120,130,0.35); border-radius:4px; }
+  #hp-root .hp-scroll::-webkit-scrollbar-track { background:transparent; }
 </style>
 </helmet>
 
@@ -38,43 +41,40 @@
 
   <!-- ============ HOME SCREEN ============ -->
   <sc-if value="{{ onHome }}" hint-placeholder-val="{{ true }}">
-    <div style="position:absolute; inset:0; display:flex; flex-direction:column;">
-
-      <!-- header -->
-      <div style="height:64px; flex:none; display:flex; align-items:center; padding:0 32px; background:var(--bar);">
-        <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-          <div style="font-weight:600; font-size:20px; color:var(--text); line-height:1.1;">Hidden Patterns</div>
-          <div style="font-weight:400; font-size:13px; color:var(--accent); margin-top:3px;">Find the algorithm hiding in the artwork.</div>
-        </div>
-        <div onClick="{{ toggleTheme }}" style="{{ togStyle }}">{{ togLabel }}</div>
-      </div>
-      <div style="height:0; border-top:0.5px solid var(--hair); flex:none;"></div>
-
-      <!-- card grid -->
-      <div style="flex:1; display:flex; align-items:center; padding:0 32px;">
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px; width:100%;">
-          <sc-for list="{{ cards }}" as="card" hint-placeholder-count="3">
-            <div onClick="{{ card.open }}" onMouseEnter="{{ card.hoverOn }}" onMouseLeave="{{ card.hoverOff }}"
-                 style="{{ card.shellStyle }}">
-              <div style="position:relative; width:100%; aspect-ratio:16/9; background-color:var(--canvas); display:flex; align-items:center; justify-content:center; border-radius:10px 10px 0 0; overflow:hidden;">
-                <img src="{{ card.img }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;" />
-                <sc-if value="{{ card.visited }}" hint-placeholder-val="{{ false }}">
-                  <span style="position:absolute; top:10px; right:12px; font-size:13px; color:#00E5FF; z-index:1;">✓</span>
-                </sc-if>
-              </div>
-              <div style="height:80px; padding:14px 16px; display:flex; flex-direction:column; justify-content:center;">
-                <div style="font-weight:600; font-size:14px; color:var(--text);">{{ card.title }}</div>
-                <div style="font-weight:400; font-size:12px; color:var(--muted); margin-top:4px;">{{ card.meta }}</div>
-              </div>
+    <div style="position:absolute; inset:0; display:flex;">
+      <!-- left intro -->
+      <div style="width:520px; flex:none; padding:54px 56px; display:flex; flex-direction:column; justify-content:center; border-right:0.5px solid var(--hair);">
+        <div style="font-weight:600; font-size:32px; color:var(--text); line-height:1.05; letter-spacing:-0.01em;">Hidden Patterns</div>
+        <div style="font-size:15px; color:var(--accent); margin-top:8px;">Find the algorithm hiding in the artwork.</div>
+        <div style="font-family:'Newsreader',serif; font-size:18px; line-height:1.6; color:var(--text-dim); margin-top:26px;">Three famous paintings, each secretly driven by an algorithm. Watch the motion, guess the rule that creates it — then reveal the answer and tweak it yourself.</div>
+        <div style="display:flex; flex-direction:column; gap:16px; margin-top:32px;">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="3">
+            <div style="display:flex; align-items:center; gap:13px;">
+              <span style="width:26px; height:26px; flex:none; border-radius:50%; border:1px solid var(--accent); color:var(--accent); font-size:13px; display:flex; align-items:center; justify-content:center;">{{ st.n }}</span>
+              <span style="font-size:14.5px; color:var(--text-dim);">{{ st.label }}</span>
             </div>
           </sc-for>
         </div>
+        <div style="font-size:11px; color:var(--foot); letter-spacing:0.04em; margin-top:44px;">KCS CompSci Curiosity Day '26</div>
+        <div onClick="{{ toggleTheme }}" style="{{ togStyle }}; align-self:flex-start; margin-top:20px;">{{ togLabel }}</div>
       </div>
-
-      <!-- footer -->
-      <div style="flex:none; padding-bottom:24px; display:flex; flex-direction:column; align-items:center; gap:8px;">
-        <div style="font-weight:400; font-size:12px; color:var(--foot);">Choose an artwork to begin.</div>
-        <div style="font-weight:400; font-size:11px; color:var(--foot); letter-spacing:0.04em; opacity:0.8;">KCS CompSci Curiosity Day '26</div>
+      <!-- right works list -->
+      <div style="flex:1; padding:32px; display:flex; flex-direction:column; justify-content:center; gap:18px; min-width:0;">
+        <sc-for list="{{ cards }}" as="card" hint-placeholder-count="3">
+          <div onClick="{{ card.open }}" onMouseEnter="{{ card.hoverOn }}" onMouseLeave="{{ card.hoverOff }}" style="{{ card.shellStyle }}">
+            <div style="width:200px; aspect-ratio:16/10; flex:none; border-radius:6px; background-color:var(--canvas); overflow:hidden; position:relative;">
+              <img src="{{ card.img }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;" />
+              <sc-if value="{{ card.visited }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute; top:8px; right:10px; font-size:13px; color:var(--accent); z-index:1;">✓</span>
+              </sc-if>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:16px; color:var(--text);">{{ card.title }}</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:4px;">{{ card.meta }}</div>
+            </div>
+            <span style="font-size:18px; color:var(--accent); flex:none;">→</span>
+          </div>
+        </sc-for>
       </div>
     </div>
   </sc-if>
@@ -84,10 +84,11 @@
     <div style="position:absolute; inset:0; display:flex; flex-direction:column;">
 
       <!-- top bar -->
-      <div style="height:44px; flex:none; display:flex; align-items:center; padding:0 18px; background:var(--bar); border-bottom:0.5px solid var(--hair);">
-        <div onClick="{{ goHome }}" onMouseEnter="{{ backHoverOn }}" onMouseLeave="{{ backHoverOff }}"
-             style="{{ backStyle }}">← all artworks</div>
-        <div style="flex:1; text-align:center; font-weight:400; font-size:13px; color:var(--muted);">{{ current.crumb }}</div>
+      <div style="height:56px; flex:none; display:flex; align-items:center; padding:0 18px; background:var(--bar); border-bottom:0.5px solid var(--hair);">
+        <div style="flex:1; display:flex; align-items:baseline; gap:12px; min-width:0;">
+          <span onClick="{{ goHome }}" onMouseEnter="{{ backHoverOn }}" onMouseLeave="{{ backHoverOff }}" style="font-size:15px; font-weight:600; color:var(--accent); letter-spacing:-0.01em; cursor:pointer; white-space:nowrap;">← Hidden Patterns</span>
+          <span style="font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Find the algorithm hiding in the artwork</span>
+        </div>
         <div onClick="{{ toggleTheme }}" style="{{ togStyleSm }}">{{ togLabel }}</div>
       </div>
 
@@ -118,6 +119,10 @@
           </div>
         </div>
       </div>
+
+      <!-- body: stage column + reading drawer -->
+      <div style="flex:1; display:flex; min-height:0;">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
 
       <!-- stage area: centres the framed artwork -->
       <div style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; padding:28px; background:var(--bg); min-height:0;">
@@ -163,30 +168,30 @@
                style="{{ revealBtnStyle }}">Reveal it →</div>
         </sc-if>
         <sc-if value="{{ postReveal }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex; align-items:center; gap:22px;">
-            <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
-            <div onClick="{{ toggleInfo }}" onMouseEnter="{{ infoHoverOn }}" onMouseLeave="{{ infoHoverOff }}" style="{{ infoLinkStyle }}">Learn more →</div>
-          </div>
+          <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
         </sc-if>
       </div>
 
-      <!-- info drawer (post-reveal, optional) -->
-      <div style="{{ infoDrawerStyle }}">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
-          <span style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent);">{{ current.algoName }}</span>
-          <div onClick="{{ toggleInfo }}" style="font-size:18px; line-height:1; color:var(--muted); cursor:pointer; padding:2px 4px;">×</div>
+      </div><!-- /stage column -->
+
+      <!-- READING DRAWER -->
+      <div style="width:440px; flex:none; background:var(--surface); border-left:0.5px solid var(--hair); display:flex; flex-direction:column; min-height:0;">
+        <div style="padding:22px 30px 0;">
+          <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Read about this work</div>
+          <div style="font-size:21px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">{{ current.title }}</div>
         </div>
-        <p style="font-size:14px; line-height:1.6; color:var(--text); margin-bottom:22px;">{{ current.about }}</p>
-        <div style="height:0; border-top:0.5px solid var(--hair); margin-bottom:20px;"></div>
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <sc-for list="{{ current.facts }}" as="fact" hint-placeholder-count="3">
-            <div style="display:flex; gap:10px;">
-              <span style="color:var(--accent); flex:none; font-size:13px;">—</span>
-              <span style="font-size:13px; line-height:1.55; color:var(--text-dim);">{{ fact }}</span>
-            </div>
+        <div style="display:flex; gap:26px; padding:18px 30px 0;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+            <div onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</div>
           </sc-for>
         </div>
+        <div style="height:0; border-top:0.5px solid var(--hair); margin-top:14px;"></div>
+        <div class="hp-scroll" style="flex:1; overflow-y:auto; padding:24px 30px 32px;">
+          <div style="font-family:'Newsreader',serif; font-size:16.5px; line-height:1.72; color:var(--text-dim); white-space:pre-line;">{{ readingBody }}</div>
+        </div>
       </div>
+
+      </div><!-- /body -->
     </div>
   </sc-if>
 
@@ -208,6 +213,7 @@ class Component extends DCLogic {
     infoOpen: false,
     infoHover: false,
     overlayOpen: false,
+    tab: 0,
     artOpacity: 0.3,
     particleColor: '#00E5FF',
     params: {
@@ -264,6 +270,26 @@ class Component extends DCLogic {
       ],
     },
   ];
+
+  SECTIONS = ['The artist', 'The painting', 'The algorithm'];
+
+  TEXT = {
+    0: [
+      '[ Artist — Vincent van Gogh. Paste the ~1000-word piece here. Blank lines become paragraph breaks. ]',
+      '[ Painting — The Starry Night. Paste the ~1000-word piece here. ]',
+      '[ Algorithm — Flow field / Perlin noise. Paste the ~1000-word piece here. ]',
+    ],
+    1: [
+      '[ Artist — Katsushika Hokusai. Paste the ~1000-word piece here. ]',
+      '[ Painting — The Great Wave off Kanagawa. Paste the ~1000-word piece here. ]',
+      '[ Algorithm — Directional flow field. Paste the ~1000-word piece here. ]',
+    ],
+    2: [
+      '[ Artist — Edvard Munch. Paste the ~1000-word piece here. ]',
+      '[ Painting — The Scream. Paste the ~1000-word piece here. ]',
+      '[ Algorithm — Wave interference / superposition. Paste the ~1000-word piece here. ]',
+    ],
+  };
 
   canvasEl = null;
   particles = [];
@@ -481,7 +507,7 @@ class Component extends DCLogic {
   componentWillUnmount() { this.stopSim(); }
 
   openCard(i) {
-    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, artOpacity: 0.3, infoOpen: false, particleColor: this.DATA[i].color || '#00E5FF' }, () => {
+    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, artOpacity: 0.3, infoOpen: false, tab: 0, particleColor: this.DATA[i].color || '#00E5FF' }, () => {
       setTimeout(() => this.startSim(), 0);
     });
   }
@@ -543,9 +569,21 @@ class Component extends DCLogic {
         open: () => this.openCard(i),
         hoverOn: () => this.setState({ hoverIdx: i }),
         hoverOff: () => this.setState({ hoverIdx: -1 }),
-        shellStyle: `background:var(--card); border:${border}; border-radius:10px; cursor:pointer; overflow:hidden; transition:border-color 0.15s;`,
+        shellStyle: `display:flex; align-items:center; gap:18px; padding:14px; background:var(--card); border:${border}; border-radius:10px; cursor:pointer; overflow:hidden; transition:border-color 0.15s;`,
       };
     });
+
+    const steps = [
+      { n: '1', label: 'Watch the motion' },
+      { n: '2', label: 'Guess the algorithm' },
+      { n: '3', label: 'Reveal & tweak it' },
+    ];
+
+    const tabs = this.SECTIONS.map((label, i) => ({
+      label,
+      pick: () => this.setState({ tab: i }),
+      style: `font-size:13.5px; font-weight:500; cursor:pointer; padding-bottom:12px; border-bottom:2px solid ${i === s.tab ? 'var(--accent)' : 'transparent'}; color:${i === s.tab ? 'var(--text)' : 'var(--muted)'}; transition:color .15s;`,
+    }));
 
     const mode = cur.mode;
     const controls = (this.CONTROLS[mode] || []).map(cfg => {
@@ -565,6 +603,9 @@ class Component extends DCLogic {
       onHome: s.screen === 'home',
       onCard,
       cards,
+      steps,
+      tabs,
+      readingBody: (this.TEXT[s.activeIdx] || [])[s.tab] || '',
       current: cur,
       stageStyle: `position:relative; height:100%; aspect-ratio:${cur.aspect}; max-width:100%; background:var(--canvas); border:1px solid var(--border); border-radius:6px; overflow:hidden;`,
       canvasRef: this.setCanvas,
