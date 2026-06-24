@@ -86,7 +86,10 @@
                 style="{{ backStyle }}">← Hidden Patterns</span>
           <span style="font-weight:400; font-size:13px; color:var(--muted);">Find the algorithm hiding in the artwork</span>
         </div>
-        <div onClick="{{ toggleTheme }}" style="{{ togStyleSm }}">{{ togLabel }}</div>
+        <sc-if value="{{ showReadToggle }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ toggleReading }}" style="{{ readToggleStyle }}">📖 Read</div>
+        </sc-if>
+        <div onClick="{{ toggleTheme }}" style="margin-left:14px; {{ togStyleSm }}">{{ togLabel }}</div>
       </div>
 
       <!-- control strip (replaces the floating Parameters panel) -->
@@ -118,8 +121,8 @@
         <div onClick="{{ reset }}" onMouseEnter="{{ resetHoverOn }}" onMouseLeave="{{ resetHoverOff }}" style="{{ resetStyle }}">↺ Reset</div>
       </div>
 
-      <!-- body: stage (left) + docked reading drawer (right) -->
-      <div style="flex:1; display:flex; min-height:0;">
+      <!-- body: stage (left) + reading drawer (docked on desktop, slide-over on tablet) -->
+      <div style="flex:1; display:flex; min-height:0; position:relative;">
 
       <!-- stage area: centres the framed artwork -->
       <div style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; padding:28px; background:var(--bg); min-height:0;">
@@ -145,10 +148,15 @@
       </div>
       <!-- end stage area -->
 
-        <!-- reading drawer (docked, always visible — optional, not gated behind Reveal) -->
-        <div style="width:440px; flex:none; background:var(--surface); border-left:0.5px solid var(--border); display:flex; flex-direction:column;">
+        <!-- reading drawer: docked column on desktop, dismissable slide-over on tablet/phone -->
+        <div style="{{ readingPanelStyle }}">
           <div style="flex:none; padding:22px 30px 0;">
-            <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Read about this work</div>
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Read about this work</div>
+              <sc-if value="{{ showReadingClose }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ closeReading }}" style="font-size:20px; line-height:1; color:var(--muted); cursor:pointer; padding:0 2px; margin-top:-2px;">×</div>
+              </sc-if>
+            </div>
             <div style="font-size:21px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">{{ current.title }}</div>
             <div style="display:flex; gap:26px; margin-top:18px;">
               <sc-for list="{{ readingTabs }}" as="tab" hint-placeholder-count="3">
@@ -201,6 +209,8 @@ class Component extends DCLogic {
   state = {
     screen: 'home',
     theme: 'dark',
+    viewport: (typeof window !== 'undefined' && window.innerWidth ? (window.innerWidth < 700 ? 'phone' : window.innerWidth < 1100 ? 'tablet' : 'desktop') : 'desktop'),
+    readingOpen: false,
     activeIdx: 0,
     hoverIdx: -1,
     visited: [false, false, false],
@@ -601,12 +611,25 @@ The simulation renders this literally. Multiple wave sources generate overlappin
     }
   }
 
-  componentWillUnmount() { this.stopSim(); }
+  componentDidMount() {
+    this._vpResize = () => {
+      const w = window.innerWidth;
+      const vp = w < 700 ? 'phone' : w < 1100 ? 'tablet' : 'desktop';
+      if (vp !== this.state.viewport) this.setState({ viewport: vp });
+    };
+    this._vpResize();
+    window.addEventListener('resize', this._vpResize);
+  }
+
+  componentWillUnmount() {
+    this.stopSim();
+    if (this._vpResize) window.removeEventListener('resize', this._vpResize);
+  }
 
   openCard(i) {
     const visited = this.state.visited.slice();
     visited[i] = true;
-    this.setState({ screen: 'card', activeIdx: i, interacted: false, visited, artOpacity: 0.3, readingTab: 'artist', particleColor: this.DATA[i].color || '#00E5FF' }, () => {
+    this.setState({ screen: 'card', activeIdx: i, interacted: false, visited, artOpacity: 0.3, readingTab: 'artist', readingOpen: false, particleColor: this.DATA[i].color || '#00E5FF' }, () => {
       setTimeout(() => this.startSim(), 0);
     });
   }
@@ -740,6 +763,15 @@ The simulation renders this literally. Multiple wave sources generate overlappin
 
       readingTabs,
       readingBody: cur[s.readingTab],
+      // responsive: docked column on desktop; dismissable slide-over on tablet/phone
+      readingPanelStyle: s.viewport === 'desktop'
+        ? `width:440px; flex:none; background:var(--surface); border-left:0.5px solid var(--border); display:flex; flex-direction:column;`
+        : `position:absolute; top:0; right:0; bottom:0; width:${s.viewport === 'phone' ? '100%' : 'min(440px, 86%)'}; background:var(--surface); border-left:0.5px solid var(--border); display:flex; flex-direction:column; z-index:7; box-shadow:-12px 0 40px rgba(0,0,0,0.45); transform:translateX(${s.readingOpen ? '0' : '100%'}); transition:transform 0.32s ease;`,
+      showReadToggle: s.viewport !== 'desktop',
+      showReadingClose: s.viewport !== 'desktop',
+      toggleReading: () => this.setState({ readingOpen: !s.readingOpen }),
+      closeReading: () => this.setState({ readingOpen: false }),
+      readToggleStyle: `font-weight:400; font-size:12px; cursor:pointer; user-select:none; white-space:nowrap; border:0.5px solid ${s.readingOpen ? 'var(--accent)' : 'var(--border)'}; border-radius:14px; padding:5px 12px; color:${s.readingOpen ? 'var(--accent)' : 'var(--muted)'}; transition:color 0.15s, border-color 0.15s;`,
       showReadingText: s.readingTab !== 'activities',
       showActivities: s.readingTab === 'activities',
       activities: cur.activities,
