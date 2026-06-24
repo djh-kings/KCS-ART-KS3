@@ -149,20 +149,6 @@
           </sc-if>
         </div>
 
-        <!-- reveal moment overlay (covers the stage area) -->
-        <sc-if value="{{ overlayOpen }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ closeOverlay }}" style="position:absolute; inset:0; z-index:8; background:rgba(6,6,12,0.82); display:flex; align-items:center; justify-content:center; padding:32px; animation:hp-backdrop 0.5s ease both;">
-            <div onClick="{{ stopProp }}" style="max-width:600px; width:100%; background:var(--surface); border:0.5px solid var(--border); border-radius:14px; padding:44px 48px 40px; animation:hp-rise 0.6s cubic-bezier(.2,.7,.2,1) 0.15s both;">
-              <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:22px;">The hidden pattern</div>
-              <div style="font-weight:400; font-size:24px; line-height:1.45; color:#FFB300;">{{ current.sentence }}</div>
-              <div style="border-top:0.5px solid var(--hair); margin:32px 0 24px;"></div>
-              <div style="display:flex; align-items:center; gap:14px;">
-                <div onClick="{{ learnFromOverlay }}" style="font-weight:600; font-size:14px; color:var(--accent); border:1.5px solid var(--accent); background:transparent; border-radius:22px; padding:9px 24px; cursor:pointer;">What's the algorithm? →</div>
-                <div onClick="{{ closeOverlay }}" style="font-weight:400; font-size:14px; color:#888888; cursor:pointer; padding:9px 8px;">Back to the artwork</div>
-              </div>
-            </div>
-          </div>
-        </sc-if>
       </div>
       <!-- end stage area -->
 
@@ -186,16 +172,6 @@
       </div>
       <!-- end body flex -->
 
-      <!-- bottom bar -->
-      <div style="height:64px; flex:none; display:flex; align-items:center; justify-content:center; padding:0 24px; background:var(--bar); border-top:0.5px solid var(--hair);">
-        <sc-if value="{{ preReveal }}" hint-placeholder-val="{{ true }}">
-          <div onClick="{{ reveal }}" onMouseEnter="{{ revealHoverOn }}" onMouseLeave="{{ revealHoverOff }}"
-               style="{{ revealBtnStyle }}">Reveal it →</div>
-        </sc-if>
-        <sc-if value="{{ postReveal }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
-        </sc-if>
-      </div>
     </div>
   </sc-if>
 
@@ -205,22 +181,15 @@
 class Component extends DCLogic {
   state = {
     screen: 'home',
-    theme: 'light',
+    theme: 'dark',
     activeIdx: 0,
     hoverIdx: -1,
     visited: [false, false, false],
     interacted: false,
-    revealed: false,
     backHover: false,
-    revealHover: false,
     togHover: false,
-    infoOpen: false,
-    infoHover: false,
-    readingOpen: false,
     readingTab: 'artist',
-    readToggleHover: false,
     resetHover: false,
-    overlayOpen: false,
     artOpacity: 0.3,
     particleColor: '#00E5FF',
     params: {
@@ -269,6 +238,7 @@ In 2006, a team of physicists analysed the brushwork in The Starry Night using t
 Paintings from his more stable periods do not show this pattern. Only the work produced during the most intense episodes does.
 
 Van Gogh had no knowledge of fluid dynamics. He painted what he saw and felt, and encoded a mathematical structure that the physics of his era could not yet describe. The flow field on screen is the algorithm that gets closest to recreating it. Adjust the turbulence slider and watch how the behaviour changes.`,
+      activities: "[Placeholder — Activities: The Starry Night]\n\nReplace this string with the activities text for The Starry Night. Separate paragraphs with a blank line (\n\n).",
     },
     {
       title: 'The Great Wave', meta: 'Hokusai · 1831',
@@ -307,6 +277,7 @@ The wave physics in Hokusai's print involves two distinct phenomena. The first i
 The simulation captures the first of these directly. The flow field tiles produce interference-like patterns when neighbouring cells point in converging directions, generating peaks where flow concentrates. The speed slider controls how fast particles move through the field; at higher speeds the curl at the wave crest becomes visible as particles bunch and accelerate. The turbulence slider introduces disorder into the cell directions, breaking the clean wave structure into choppier, more chaotic water.
 
 Hokusai worked from observation and instinct. The physics he depicted — rogue wave formation, Stokes drift, the ballistic arc of breaking spray — was not formally described until decades after his death. The algorithm replicates the visual result. The underlying mathematics turns out to be the same.`,
+      activities: "[Placeholder — Activities: The Great Wave]\n\nReplace this string with the activities text for The Great Wave. Separate paragraphs with a blank line (\n\n).",
     },
     {
       title: 'The Scream', meta: 'Munch · 1893',
@@ -343,6 +314,7 @@ In optics this produces visible fringes — alternating bands of bright and dark
 Munch's sky is structured as an interference pattern. The alternating bands of red and dark blue, the undulating rhythm across the canvas, the sense of the landscape vibrating — these are not purely expressive choices. They map directly onto the visual signature of wave superposition. He painted a sound wave oscillating through the air, which is precisely what he described: not a man screaming, but a man overwhelmed by a scream in the environment itself.
 
 The simulation renders this literally. Multiple wave sources generate overlapping fields; the particle movement reflects the combined displacement at each point. The turbulence slider introduces phase variation between the wave sources, shifting the interference pattern from regular and rhythmic to broken and chaotic. Turn it to maximum and the orderly bands collapse. That, in physical terms, is what noise is.`,
+      activities: "[Placeholder — Activities: The Scream]\n\nReplace this string with the activities text for The Scream. Separate paragraphs with a blank line (\n\n).",
     },
   ];
 
@@ -565,7 +537,9 @@ The simulation renders this literally. Multiple wave sources generate overlappin
   componentWillUnmount() { this.stopSim(); }
 
   openCard(i) {
-    this.setState({ screen: 'card', activeIdx: i, interacted: false, revealed: false, overlayOpen: false, artOpacity: 0.3, infoOpen: false, readingOpen: false, readingTab: 'artist', particleColor: this.DATA[i].color || '#00E5FF' }, () => {
+    const visited = this.state.visited.slice();
+    visited[i] = true;
+    this.setState({ screen: 'card', activeIdx: i, interacted: false, visited, artOpacity: 0.3, readingTab: 'artist', particleColor: this.DATA[i].color || '#00E5FF' }, () => {
       setTimeout(() => this.startSim(), 0);
     });
   }
@@ -574,13 +548,6 @@ The simulation renders this literally. Multiple wave sources generate overlappin
   doReset() {
     // re-seed particles and clear placed rocks / taps; back to the starting state
     this.setState({ interacted: false }, () => { if (this.canvasEl) this.startSim(); });
-  }
-
-  doReveal() {
-    if (this.state.revealed) return;
-    const visited = this.state.visited.slice();
-    visited[this.state.activeIdx] = true;
-    this.setState({ revealed: true, visited, artOpacity: 0.7, overlayOpen: true });
   }
 
   setParam(mode, key, val) {
@@ -647,6 +614,7 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       { key: 'artist', label: 'The artist' },
       { key: 'painting', label: 'The painting' },
       { key: 'algorithm', label: 'The algorithm' },
+      { key: 'activities', label: 'Activities' },
     ].map(t => {
       const active = s.readingTab === t.key;
       return {
@@ -678,8 +646,6 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       stageStyle: `position:relative; height:100%; aspect-ratio:${cur.aspect}; max-width:100%; background:var(--canvas); border:1px solid var(--border); border-radius:6px; overflow:hidden;`,
       canvasRef: this.setCanvas,
       showInstruction: onCard && !s.interacted,
-      preReveal: onCard && !s.revealed,
-      postReveal: onCard && s.revealed,
 
       controls,
       artOpacity: s.artOpacity,
@@ -701,14 +667,7 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       resetHoverOff: () => this.setState({ resetHover: false }),
       resetStyle: `align-self:flex-end; font-size:12px; color:${s.resetHover ? 'var(--accent)' : 'var(--muted)'}; border:0.5px solid ${s.resetHover ? 'var(--accent)' : 'var(--border)'}; border-radius:16px; padding:7px 14px; cursor:pointer; white-space:nowrap; transition:color 0.15s, border-color 0.15s;`,
 
-      overlayOpen: onCard && s.overlayOpen,
-      closeOverlay: () => this.setState({ overlayOpen: false }),
-      openOverlay: () => this.setState({ overlayOpen: true }),
-      learnFromOverlay: () => this.setState({ overlayOpen: false, infoOpen: true }),
-      stopProp: (e) => e.stopPropagation(),
-
       goHome: () => this.goHome(),
-      reveal: () => this.doReveal(),
       toggleTheme: () => this.setState({ theme: s.theme === 'dark' ? 'light' : 'dark' }),
       togLabel: s.theme === 'dark' ? 'Light' : 'Dark',
       togStyle: togBase + togHover,
@@ -716,11 +675,7 @@ The simulation renders this literally. Multiple wave sources generate overlappin
 
       backHoverOn: () => this.setState({ backHover: true }),
       backHoverOff: () => this.setState({ backHover: false }),
-      backStyle: `width:90px; font-weight:400; font-size:13px; cursor:pointer; color:${s.backHover ? 'var(--accent)' : 'var(--text)'}; transition:color 0.15s;`,
-
-      revealHoverOn: () => this.setState({ revealHover: true }),
-      revealHoverOff: () => this.setState({ revealHover: false }),
-      revealBtnStyle: `font-weight:600; font-size:15px; color:var(--accent); border:1.5px solid var(--accent); background:${s.revealHover ? '#001A22' : 'transparent'}; border-radius:24px; padding:10px 32px; cursor:pointer; animation:hp-pulse 2.5s ease-in-out infinite;`,
+      backStyle: `width:auto; font-weight:600; font-size:15px; cursor:pointer; color:${s.backHover ? '#FFFFFF' : 'var(--accent)'}; transition:color 0.15s; white-space:nowrap;`,
     };
   }
 }
