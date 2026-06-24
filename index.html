@@ -18,13 +18,13 @@
     --bg:#0A0A0A; --bar:#0A0A0A; --card:#1A1A1A; --canvas:#080810;
     --text:#FFFFFF; --muted:#666666; --border:#333333; --hair:#2A2A2A;
     --accent:#00E5FF; --accent-dim:rgba(0,229,255,0.4); --foot:#444444;
-    --panel:rgba(16,16,20,0.82);
+    --panel:rgba(16,16,20,0.82); --surface:#141414; --text-dim:#C8C8C8;
   }
   #hp-root[data-theme="light"] {
     --bg:#F5F5F4; --bar:#FFFFFF; --card:#FFFFFF; --canvas:#080810;
     --text:#0A0A0A; --muted:#78716C; --border:#D6D3D1; --hair:#E7E5E4;
     --accent:#0097A7; --accent-dim:rgba(0,151,167,0.45); --foot:#A8A29E;
-    --panel:rgba(16,16,20,0.82);
+    --panel:rgba(16,16,20,0.82); --surface:#FFFFFF; --text-dim:#57534E;
   }
   #hp-root input[type=range]{ -webkit-appearance:none; appearance:none; height:3px; border-radius:2px; background:#333; accent-color:#00E5FF; cursor:pointer; }
   #hp-root input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:#00E5FF; cursor:pointer; }
@@ -143,12 +143,12 @@
         <!-- reveal moment overlay (covers the stage area) -->
         <sc-if value="{{ overlayOpen }}" hint-placeholder-val="{{ false }}">
           <div onClick="{{ closeOverlay }}" style="position:absolute; inset:0; z-index:8; background:rgba(6,6,12,0.82); display:flex; align-items:center; justify-content:center; padding:32px; animation:hp-backdrop 0.5s ease both;">
-            <div onClick="{{ stopProp }}" style="max-width:600px; width:100%; background:#141414; border:0.5px solid #2E2E2E; border-radius:14px; padding:44px 48px 40px; animation:hp-rise 0.6s cubic-bezier(.2,.7,.2,1) 0.15s both;">
-              <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#00E5FF; margin-bottom:22px;">The hidden pattern</div>
+            <div onClick="{{ stopProp }}" style="max-width:600px; width:100%; background:var(--surface); border:0.5px solid var(--border); border-radius:14px; padding:44px 48px 40px; animation:hp-rise 0.6s cubic-bezier(.2,.7,.2,1) 0.15s both;">
+              <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:22px;">The hidden pattern</div>
               <div style="font-weight:400; font-size:24px; line-height:1.45; color:#FFB300;">{{ current.sentence }}</div>
-              <div style="border-top:0.5px solid #2A2A2A; margin:32px 0 24px;"></div>
+              <div style="border-top:0.5px solid var(--hair); margin:32px 0 24px;"></div>
               <div style="display:flex; align-items:center; gap:14px;">
-                <div onClick="{{ learnFromOverlay }}" style="font-weight:600; font-size:14px; color:#00E5FF; border:1.5px solid #00E5FF; background:transparent; border-radius:22px; padding:9px 24px; cursor:pointer;">What's the algorithm? →</div>
+                <div onClick="{{ learnFromOverlay }}" style="font-weight:600; font-size:14px; color:var(--accent); border:1.5px solid var(--accent); background:transparent; border-radius:22px; padding:9px 24px; cursor:pointer;">What's the algorithm? →</div>
                 <div onClick="{{ closeOverlay }}" style="font-weight:400; font-size:14px; color:#888888; cursor:pointer; padding:9px 8px;">Back to the artwork</div>
               </div>
             </div>
@@ -174,15 +174,15 @@
       <div style="{{ infoDrawerStyle }}">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
           <span style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent);">{{ current.algoName }}</span>
-          <div onClick="{{ toggleInfo }}" style="font-size:18px; line-height:1; color:#888; cursor:pointer; padding:2px 4px;">×</div>
+          <div onClick="{{ toggleInfo }}" style="font-size:18px; line-height:1; color:var(--muted); cursor:pointer; padding:2px 4px;">×</div>
         </div>
-        <p style="font-size:14px; line-height:1.6; color:#FFFFFF; margin-bottom:22px;">{{ current.about }}</p>
-        <div style="height:0; border-top:0.5px solid #2A2A2A; margin-bottom:20px;"></div>
+        <p style="font-size:14px; line-height:1.6; color:var(--text); margin-bottom:22px;">{{ current.about }}</p>
+        <div style="height:0; border-top:0.5px solid var(--hair); margin-bottom:20px;"></div>
         <div style="display:flex; flex-direction:column; gap:16px;">
           <sc-for list="{{ current.facts }}" as="fact" hint-placeholder-count="3">
             <div style="display:flex; gap:10px;">
               <span style="color:var(--accent); flex:none; font-size:13px;">—</span>
-              <span style="font-size:13px; line-height:1.55; color:#C8C8C8;">{{ fact }}</span>
+              <span style="font-size:13px; line-height:1.55; color:var(--text-dim);">{{ fact }}</span>
             </div>
           </sc-for>
         </div>
@@ -581,7 +581,7 @@ class Component extends DCLogic {
       infoHoverOn: () => this.setState({ infoHover: true }),
       infoHoverOff: () => this.setState({ infoHover: false }),
       infoLinkStyle: `font-weight:400; font-size:13px; cursor:pointer; white-space:nowrap; color:${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; border-bottom:0.5px solid ${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; padding-bottom:1px; transition:color 0.15s, border-color 0.15s;`,
-      infoDrawerStyle: `position:absolute; top:44px; bottom:0; right:0; width:340px; background:#0E0E0E; border-left:0.5px solid #2A2A2A; padding:24px 26px; overflow-y:auto; transform:translateX(${s.infoOpen ? '0' : '100%'}); transition:transform 0.35s ease; z-index:5;`,
+      infoDrawerStyle: `position:absolute; top:44px; bottom:0; right:0; width:340px; background:var(--surface); border-left:0.5px solid var(--border); padding:24px 26px; overflow-y:auto; transform:translateX(${s.infoOpen ? '0' : '100%'}); transition:transform 0.35s ease; z-index:5;`,
 
       overlayOpen: onCard && s.overlayOpen,
       closeOverlay: () => this.setState({ overlayOpen: false }),
