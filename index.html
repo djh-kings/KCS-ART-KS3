@@ -93,8 +93,7 @@
                 style="{{ backStyle }}">← Hidden Patterns</span>
           <span style="font-weight:400; font-size:13px; color:var(--muted);">Find the algorithm hiding in the artwork</span>
         </div>
-        <div onClick="{{ toggleReading }}" style="{{ readToggleStyle }}">📖 Read about this work</div>
-        <div onClick="{{ toggleTheme }}" style="margin-left:14px; {{ togStyleSm }}">{{ togLabel }}</div>
+        <div onClick="{{ toggleTheme }}" style="{{ togStyleSm }}">{{ togLabel }}</div>
       </div>
 
       <!-- control strip (replaces the floating Parameters panel) -->
@@ -124,6 +123,9 @@
           </div>
         </div>
       </div>
+
+      <!-- body: stage (left) + docked reading drawer (right) -->
+      <div style="flex:1; display:flex; min-height:0;">
 
       <!-- stage area: centres the framed artwork -->
       <div style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; padding:28px; background:var(--bg); min-height:0;">
@@ -164,6 +166,27 @@
           </div>
         </sc-if>
       </div>
+      <!-- end stage area -->
+
+        <!-- reading drawer (docked, always visible — optional, not gated behind Reveal) -->
+        <div style="width:440px; flex:none; background:var(--surface); border-left:0.5px solid var(--border); display:flex; flex-direction:column;">
+          <div style="flex:none; padding:22px 30px 0;">
+            <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Read about this work</div>
+            <div style="font-size:21px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">{{ current.title }}</div>
+            <div style="display:flex; gap:26px; margin-top:18px;">
+              <sc-for list="{{ readingTabs }}" as="tab" hint-placeholder-count="3">
+                <div onClick="{{ tab.select }}" style="{{ tab.style }}">{{ tab.label }}</div>
+              </sc-for>
+            </div>
+            <div style="height:0; border-top:0.5px solid var(--hair); margin-top:14px;"></div>
+          </div>
+          <div class="hp-read-body" style="flex:1; min-height:0; overflow-y:auto; padding:24px 30px 32px;">
+            <div style="font-family:'Newsreader',serif; font-size:16.5px; line-height:1.72; color:var(--text); white-space:pre-line;">{{ readingBody }}</div>
+          </div>
+        </div>
+
+      </div>
+      <!-- end body flex -->
 
       <!-- bottom bar -->
       <div style="height:64px; flex:none; display:flex; align-items:center; justify-content:center; padding:0 24px; background:var(--bar); border-top:0.5px solid var(--hair);">
@@ -172,29 +195,8 @@
                style="{{ revealBtnStyle }}">Reveal it →</div>
         </sc-if>
         <sc-if value="{{ postReveal }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex; align-items:center; gap:22px;">
-            <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
-            <div onClick="{{ toggleReading }}" onMouseEnter="{{ infoHoverOn }}" onMouseLeave="{{ infoHoverOff }}" style="{{ infoLinkStyle }}">Read about this work →</div>
-          </div>
+          <div onClick="{{ openOverlay }}" style="font-size:13px; color:#FFB300; cursor:pointer; border-bottom:0.5px solid rgba(255,179,0,0.5); padding-bottom:1px;">↺ Read the reveal</div>
         </sc-if>
-      </div>
-
-      <!-- reading drawer (optional, always available — not gated behind Reveal) -->
-      <div style="{{ readingDrawerStyle }}">
-        <div style="flex:none; padding:20px 24px 0;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-            <span style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent);">Read about this work</span>
-            <div onClick="{{ toggleReading }}" style="font-size:18px; line-height:1; color:var(--muted); cursor:pointer; padding:2px 4px;">×</div>
-          </div>
-          <div style="display:flex; gap:4px; border-bottom:0.5px solid var(--hair);">
-            <sc-for list="{{ readingTabs }}" as="tab" hint-placeholder-count="3">
-              <div onClick="{{ tab.select }}" style="{{ tab.style }}">{{ tab.label }}</div>
-            </sc-for>
-          </div>
-        </div>
-        <div class="hp-read-body" style="flex:1; min-height:0; overflow-y:auto; padding:22px 24px 28px;">
-          <div style="font-family:'Newsreader',serif; font-size:16px; line-height:1.68; color:var(--text); white-space:pre-line;">{{ readingBody }}</div>
-        </div>
       </div>
     </div>
   </sc-if>
@@ -692,16 +694,9 @@ The simulation renders this literally. Multiple wave sources generate overlappin
         style: `width:22px; height:22px; border-radius:50%; cursor:pointer; background:${hex}; border:2px solid ${s.particleColor === hex ? '#FFFFFF' : 'transparent'}; box-shadow:0 0 6px ${hex};`,
       })),
 
-      infoHoverOn: () => this.setState({ infoHover: true }),
-      infoHoverOff: () => this.setState({ infoHover: false }),
-      infoLinkStyle: `font-weight:400; font-size:13px; cursor:pointer; white-space:nowrap; color:${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; border-bottom:0.5px solid ${s.infoHover ? '#FFFFFF' : 'var(--accent)'}; padding-bottom:1px; transition:color 0.15s, border-color 0.15s;`,
-
       steps,
       readingTabs,
       readingBody: cur[s.readingTab],
-      toggleReading: () => this.setState({ readingOpen: !s.readingOpen }),
-      readToggleStyle: `font-weight:400; font-size:12px; cursor:pointer; user-select:none; white-space:nowrap; border:0.5px solid ${s.readingOpen ? 'var(--accent)' : 'var(--border)'}; border-radius:14px; padding:5px 12px; color:${s.readingOpen || s.readToggleHover ? 'var(--accent)' : 'var(--muted)'}; transition:color 0.15s, border-color 0.15s;`,
-      readingDrawerStyle: `position:absolute; top:44px; bottom:0; right:0; width:380px; background:var(--surface); border-left:0.5px solid var(--border); display:flex; flex-direction:column; transform:translateX(${s.readingOpen ? '0' : '100%'}); transition:transform 0.35s ease; z-index:5;`,
 
       reset: () => this.doReset(),
       resetHoverOn: () => this.setState({ resetHover: true }),
