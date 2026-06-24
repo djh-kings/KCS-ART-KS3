@@ -117,6 +117,10 @@
             </sc-for>
           </div>
         </div>
+        <div style="display:flex; flex-direction:column; gap:7px; align-self:flex-end;">
+          <span style="font-size:11px; color:var(--muted); letter-spacing:0.02em;">&nbsp;</span>
+          <div onClick="{{ resetParams }}" onMouseEnter="{{ resetHoverOn }}" onMouseLeave="{{ resetHoverOff }}" style="{{ resetStyle }}">↺ Reset</div>
+        </div>
       </div>
 
       <!-- stage area: centres the framed artwork -->
@@ -269,6 +273,14 @@ class Component extends DCLogic {
   particles = [];
   rocks = [];
   raf = null;
+  flowReady = false;
+
+  // Painting-matched defaults — the "reset" target for each mode.
+  DEFAULT_PARAMS = {
+    flow:   { count: 600, scale: 1.0, pull: 1.0, speed: 1.0 },
+    wave:   { speed: 1.0, swell: 1.0, rock: 1.0 },
+    ripple: { spacing: 46, speed: 1.0, swirl: 1.0 },
+  };
   mouse = { x: -9999, y: -9999, active: false };
 
   setCanvas = (el) => {
@@ -289,6 +301,7 @@ class Component extends DCLogic {
     window.addEventListener('resize', resize);
 
     const mode = this.DATA[this.state.activeIdx].mode;
+    this.buildFieldFromImage(this.state.activeIdx);
     this.particles = [];
     this.rocks = [];
     this.sources = [];
@@ -410,10 +423,16 @@ class Component extends DCLogic {
         ctx.lineWidth = 1.0 + 1.5 * f;
         ctx.globalAlpha = 0.4 + 0.5 * f;
         ctx.beginPath();
+        let bend = 0;
         for (let x = 0; x <= c.width; x += stepX) {
+          // bend the band to follow the painting's brushstrokes (integrated slope, damped)
+          if (this.flowReady) {
+            const fs = this.sampleField(x / c.width, baseY / c.height);
+            if (fs) { let sl = Math.max(-1.5, Math.min(1.5, Math.tan(fs.a))); bend = bend * 0.95 + sl * stepX * fs.k * 0.5 * sw; }
+          }
           // displacement depends on y, so estimate then refine once
-          let y = baseY + warp(x, baseY) + ripple(x, baseY);
-          y = baseY + warp(x, y) + ripple(x, y);
+          let y = baseY + bend + warp(x, baseY) + ripple(x, baseY);
+          y = baseY + bend + warp(x, y) + ripple(x, y);
           if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.stroke();
@@ -437,20 +456,45 @@ class Component extends DCLogic {
       p.px = p.x; p.py = p.y;
       let a;
       if (mode === 'wave') {
-        a = this.field(p.x, p.y, this.t) * 0.25 * P.wave.swell;
-        let vx = Math.cos(a) + 1.1, vy = Math.sin(a) * 0.8;
+        // base direction follows the print's brushwork, drifting rightward like a current
+        const samp = this.sampleField(p.x / c.width, p.y / c.height);
+        let dx, dy;
+        if (samp) {
+          dx = Math.cos(samp.a); dy = Math.sin(samp.a);
+          if (dx < 0) { dx = -dx; dy = -dy; }                 // resolve the stroke line downstream
+          dy += Math.sin(this.field(p.x, p.y, this.t)) * (1 - samp.k) * 0.5;
+        } else {
+          a = this.field(p.x, p.y, this.t) * 0.25 * P.wave.swell;
+          dx = Math.cos(a); dy = Math.sin(a);
+        }
+        let vx = dx + 1.1, vy = dy * 0.8 * P.wave.swell;
         for (const rk of this.rocks) {
-          const dx = p.x - rk.x, dy = p.y - rk.y, d = Math.hypot(dx, dy);
-          if (d < rk.r * 2.2) { const f = (rk.r * 2.2 - d) / (rk.r * 2.2); vx += (dx / (d || 1)) * f * 3 * P.wave.rock; vy += (dy / (d || 1)) * f * 3 * P.wave.rock; }
+          const rdx = p.x - rk.x, rdy = p.y - rk.y, d = Math.hypot(rdx, rdy);
+          if (d < rk.r * 2.2) { const f = (rk.r * 2.2 - d) / (rk.r * 2.2); vx += (rdx / (d || 1)) * f * 3 * P.wave.rock; vy += (rdy / (d || 1)) * f * 3 * P.wave.rock; }
         }
         p.x += vx * 0.9 * P.wave.speed; p.y += vy * 0.9 * P.wave.speed;
       } else {
-        a = this.field(p.x, p.y, this.t) * Math.PI * P.flow.scale;
-        let vx = Math.cos(a), vy = Math.sin(a);
+        // follow the painting's brushstroke orientation; Turbulence adds free noise on top
+        const samp = this.sampleField(p.x / c.width, p.y / c.height);
+        let vx, vy;
+        if (samp) {
+          let dx = Math.cos(samp.a), dy = Math.sin(samp.a);
+          const hx = p.hx != null ? p.hx : (Math.random() * 2 - 1);
+          const hy = p.hy != null ? p.hy : (Math.random() * 2 - 1);
+          if (dx * hx + dy * hy < 0) { dx = -dx; dy = -dy; }   // keep flowing along the stroke
+          const na = this.field(p.x, p.y, this.t) * Math.PI;
+          const nw = Math.max(0, (1 - samp.k) * 0.8 + (P.flow.scale - 1) * 0.6);
+          vx = dx + Math.cos(na) * nw; vy = dy + Math.sin(na) * nw;
+          const m = Math.hypot(vx, vy) || 1; vx /= m; vy /= m;
+        } else {
+          a = this.field(p.x, p.y, this.t) * Math.PI * P.flow.scale;
+          vx = Math.cos(a); vy = Math.sin(a);
+        }
         if (this.mouse.active) {
           const dx = p.x - this.mouse.x, dy = p.y - this.mouse.y, d = Math.hypot(dx, dy);
           if (d < 140) { const f = (140 - d) / 140; vx += (dx / (d || 1)) * f * 2.4 * P.flow.pull; vy += (dy / (d || 1)) * f * 2.4 * P.flow.pull; }
         }
+        p.hx = vx; p.hy = vy;
         p.x += vx * 1.1 * P.flow.speed; p.y += vy * 1.1 * P.flow.speed;
       }
       p.life--;
@@ -509,6 +553,89 @@ class Component extends DCLogic {
     } else {
       this.particles.length = n;
     }
+  }
+
+  // Read the artwork's brushwork into a coarse orientation field so particles
+  // can follow the actual strokes. For each cell we store the dominant stroke
+  // angle (structure tensor) and a coherence score (how strongly oriented it is).
+  buildFieldFromImage(idx) {
+    this.flowReady = false;
+    const data = this.DATA[idx];
+    if (!data || !data.img) return;
+    const GW = 100;
+    let ar = 16 / 9;
+    if (typeof data.aspect === 'string') { const m = data.aspect.split('/'); if (m.length === 2 && +m[1]) ar = +m[0] / +m[1]; }
+    else if (typeof data.aspect === 'number') ar = data.aspect;
+    const GH = Math.max(24, Math.round(GW / ar));
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const oc = document.createElement('canvas');
+        oc.width = GW; oc.height = GH;
+        const octx = oc.getContext('2d', { willReadFrequently: true });
+        octx.drawImage(img, 0, 0, GW, GH);
+        const pix = octx.getImageData(0, 0, GW, GH).data;
+        const N = GW * GH;
+        const lum = new Float32Array(N);
+        for (let i = 0; i < N; i++) lum[i] = 0.299 * pix[i * 4] + 0.587 * pix[i * 4 + 1] + 0.114 * pix[i * 4 + 2];
+        const at = (x, y) => lum[Math.max(0, Math.min(GH - 1, y)) * GW + Math.max(0, Math.min(GW - 1, x))];
+        // Sobel gradients
+        const gx = new Float32Array(N), gy = new Float32Array(N);
+        for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+          const i = y * GW + x;
+          gx[i] = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+          gy[i] = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+        }
+        // structure tensor, then box-blur to smooth orientation over a neighbourhood
+        const Jxx = new Float32Array(N), Jyy = new Float32Array(N), Jxy = new Float32Array(N);
+        for (let i = 0; i < N; i++) { Jxx[i] = gx[i] * gx[i]; Jyy[i] = gy[i] * gy[i]; Jxy[i] = gx[i] * gy[i]; }
+        const blur = (src) => {
+          const out = new Float32Array(N), R = 2;
+          for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+            let s = 0, n = 0;
+            for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+              const xx = x + dx, yy = y + dy;
+              if (xx < 0 || yy < 0 || xx >= GW || yy >= GH) continue;
+              s += src[yy * GW + xx]; n++;
+            }
+            out[y * GW + x] = s / n;
+          }
+          return out;
+        };
+        const bxx = blur(Jxx), byy = blur(Jyy), bxy = blur(Jxy);
+        const ang = new Float32Array(N), coh = new Float32Array(N);
+        for (let i = 0; i < N; i++) {
+          // dominant gradient orientation; the stroke runs perpendicular to it
+          ang[i] = 0.5 * Math.atan2(2 * bxy[i], bxx[i] - byy[i]) + Math.PI / 2;
+          const tr = bxx[i] + byy[i];
+          const det = Math.hypot(bxx[i] - byy[i], 2 * bxy[i]);
+          coh[i] = tr > 1e-6 ? det / tr : 0;
+        }
+        this.flowGW = GW; this.flowGH = GH; this.flowAngle = ang; this.flowCoh = coh; this.flowReady = true;
+      } catch (e) { /* leave the noise fallback in place */ }
+    };
+    img.src = data.img;
+  }
+
+  // Sample the orientation field at normalised coords (0..1). Returns the local
+  // stroke angle `a` and coherence `k`, or null if the field isn't ready.
+  sampleField(nx, ny) {
+    if (!this.flowReady) return null;
+    const GW = this.flowGW, GH = this.flowGH;
+    const gx = Math.max(0, Math.min(GW - 1, Math.floor(nx * GW)));
+    const gy = Math.max(0, Math.min(GH - 1, Math.floor(ny * GH)));
+    const i = gy * GW + gx;
+    return { a: this.flowAngle[i], k: this.flowCoh[i] };
+  }
+
+  resetParams() {
+    const idx = this.state.activeIdx;
+    const mode = this.DATA[idx].mode;
+    const defaults = { ...this.DEFAULT_PARAMS[mode] };
+    const params = { ...this.state.params, [mode]: defaults };
+    this.setState({ params, artOpacity: 0.3, particleColor: this.DATA[idx].color || '#00E5FF' }, () => {
+      if (mode === 'flow') this.rebuildParticles(defaults.count);
+    });
   }
 
   CONTROLS = {
@@ -597,6 +724,10 @@ class Component extends DCLogic {
 
       goHome: () => this.goHome(),
       reveal: () => this.doReveal(),
+      resetParams: () => this.resetParams(),
+      resetHoverOn: () => this.setState({ resetHover: true }),
+      resetHoverOff: () => this.setState({ resetHover: false }),
+      resetStyle: togBase + (s.resetHover ? 'color:var(--accent); border-color:var(--accent);' : ''),
       toggleTheme: () => this.setState({ theme: s.theme === 'dark' ? 'light' : 'dark' }),
       togLabel: s.theme === 'dark' ? 'Light' : 'Dark',
       togStyle: togBase + togHover,
