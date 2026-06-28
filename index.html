@@ -258,16 +258,40 @@
         <div onClick="{{ closeReading }}" style="width:38px; height:38px; background:transparent; border:1px solid rgba(255,255,255,0.16); color:#e9e9f0; font-size:18px; cursor:pointer; font-family:'IBM Plex Mono',monospace; display:flex; align-items:center; justify-content:center; user-select:none;">×</div>
       </div>
 
-      <!-- tabs: Artist / Painting / Algorithm -->
-      <div style="display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid rgba(255,255,255,0.07); background:#0d0d14;">
-        <sc-for list="{{ readTabs }}" as="tab" hint-placeholder-count="3">
+      <!-- tabs: Artist / Painting / Algorithm / Activities -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid rgba(255,255,255,0.07); background:#0d0d14;">
+        <sc-for list="{{ readTabs }}" as="tab" hint-placeholder-count="4">
           <div onClick="{{ tab.pick }}" style="{{ tab.style }}">{{ tab.label }}</div>
         </sc-for>
       </div>
 
       <!-- body -->
       <div class="hp-scroll" style="flex:1; overflow-y:auto; padding:32px 36px 80px;">
-        <div style="font-size:18px; line-height:1.7; color:#d4d4dd; white-space:pre-line;">{{ readBody }}</div>
+        <sc-if value="{{ showReadingText }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:18px; line-height:1.7; color:#d4d4dd; white-space:pre-line;">{{ readBody }}</div>
+        </sc-if>
+        <sc-if value="{{ showActivities }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15.5px; line-height:1.6; color:#cfcfd8; background:#101019; border:1px solid rgba(255,255,255,0.08); padding:18px 20px; white-space:pre-line;">{{ actIntro }}</div>
+          <div style="font-size:13px; line-height:1.55; color:#9a9aa6; border-left:2px solid {{ accent }}; padding:8px 14px; margin-top:16px; margin-bottom:28px;">{{ actBefore }}</div>
+          <sc-for list="{{ activities }}" as="a" hint-placeholder-count="4">
+            <div style="margin-bottom:28px;">
+              <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:8px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:{{ accent }};">{{ a.n }}</span>
+                <span style="font-family:'Zilla Slab',serif; font-weight:600; font-size:18px; color:#f6f6fb;">{{ a.title }}</span>
+              </div>
+              <div style="font-family:'Source Serif 4',serif; font-size:16px; line-height:1.6; color:#cfcfd8; white-space:pre-line;">{{ a.body }}</div>
+            </div>
+          </sc-for>
+          <div style="border-top:1px solid rgba(255,255,255,0.08); margin-top:6px; padding-top:20px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:{{ accent }}; margin-bottom:14px;">Final questions</div>
+            <sc-if value="{{ finalUnlocked }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'Source Serif 4',serif; font-size:16px; line-height:1.62; color:#cfcfd8; white-space:pre-line;">{{ actFinal }}</div>
+            </sc-if>
+            <sc-if value="{{ finalLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:14px; line-height:1.55; color:#6f6f7b;">Come back here once you've explored all three works.</div>
+            </sc-if>
+          </div>
+        </sc-if>
       </div>
     </aside>
   </sc-if>
@@ -332,6 +356,12 @@ class Component extends DCLogic {
         'In 2024 researchers measured the brushstroke swirls in the real painting and found they match the statistics of true turbulent flow.',
         'The same flow-field technique drives smoke, fire and cloth in films and games.',
       ],
+      activities: [
+        { n: '1', title: 'Work out the sliders', body: `Without reading the other tabs, drag each slider and note — in plain English — what you think it does:\n\n•  Particles\n•  Turbulence\n•  Cursor pull\n•  Speed\n\nNow read the panel. Were you right?` },
+        { n: '2', title: 'Find the calm', body: `Move your cursor slowly around the canvas until the particles barely move. Mark the spot on the printed outline.\n\nDoes your partner find the same spot? Why?` },
+        { n: '3', title: 'Best match', body: `Adjust the sliders until the simulation looks as close to the real painting as possible. Note your settings — Particles, Turbulence, Speed and Colour — in your book.\n\nCompare with your partner. Who got closer?` },
+        { n: '4', title: 'Break it', body: `Now make it look as unlike the painting as you can. What settings did you use?` },
+      ],
     },
     {
       title: 'The Great Wave', meta: 'Katsushika Hokusai · 1831',
@@ -353,6 +383,12 @@ class Component extends DCLogic {
         'The algorithm has no concept of "water", "wave" or "rock" — only points moving along arrows.',
         'Rerouting flow around obstacles is exactly how engineers simulate rivers, wind tunnels and aircraft wings.',
         'Hokusai made this print around 1831; it has since become one of the most reproduced images on Earth.',
+      ],
+      activities: [
+        { n: '5', title: 'Two algorithms, one feeling', body: `Starry Night uses a Perlin-noise flow field. The Great Wave uses a tiled directional flow field — a different algorithm. Find one thing that looks the same between the two simulations, and one thing that looks different.\n\nSame? Different?` },
+        { n: '6', title: 'Direction', body: `Watch the particles for 20 seconds without touching anything. Which direction are most of them moving — left to right, right to left, or no clear direction?\n\nDrag Turbulence to maximum. Does that change your answer?` },
+        { n: '7', title: 'Colour', body: `Hokusai used two main colours in the original print. Pick the closest from the palette.\n\nBetter or worse than the default? Why?` },
+        { n: '8', title: 'Wave speed', body: `A real wave breaks in about two seconds. Set Speed so the particles feel like an actual wave.` },
       ],
     },
     {
@@ -376,10 +412,15 @@ class Component extends DCLogic {
         'The same maths describes ripples on a pond, the noise-cancelling in your headphones, and the interference fringes that first proved light travels as a wave.',
         "Munch said the blood-red sky over Oslo made him feel nature itself was screaming — here that scream spreads outward as overlapping waves.",
       ],
+      activities: [
+        { n: '9',  title: 'First impression', body: `Before touching anything, write one word for how this feels different from the other two.` },
+        { n: '10', title: 'Cursor pull', body: `Set Cursor pull to maximum. Move your cursor slowly across the canvas.\n\nWhat does it feel like the cursor is doing to the particles?\n\nWhy do you think this suits The Scream more than it suits Van Gogh's painting?` },
+        { n: '11', title: 'Best match', body: `Get as close to the painting as you can. Note your settings — Particles, Turbulence, Cursor pull and Speed — in your book.` },
+      ],
     },
   ];
 
-  READ_SECTIONS = ['The artist', 'The painting', 'The algorithm'];
+  READ_SECTIONS = ['The artist', 'The painting', 'The algorithm', 'Activities'];
 
   // Reading-drawer body text. Blank lines become paragraph breaks (white-space: pre-line).
   TEXT = {
@@ -937,6 +978,14 @@ The simulation renders this literally. Multiple wave sources generate overlappin
       closeReading: () => this.setState({ readingOpen: false }),
       readTabs,
       readBody: (this.TEXT[s.activeIdx] || [])[s.readTab] || '',
+      showReadingText: s.readTab < 3,
+      showActivities: s.readTab === 3,
+      activities: cur.activities || [],
+      actIntro: `The sliders change how the algorithm behaves. Your job is to work out what each one is actually doing, then see if you can make the simulation match the painting underneath it.\n\nTry the sliders before you read the other tabs.`,
+      actBefore: `Before you start: look at the three paintings on the home screen and write down one word for what they have in common. Come back to it at the end.`,
+      finalUnlocked: allDone,
+      finalLocked: !allDone,
+      actFinal: `Go back to your word from the start. What do the three paintings actually have in common?\n\nThe algorithm doesn't know it's making art. Van Gogh didn't know he was running an algorithm. So who made this?`,
     };
   }
 }
